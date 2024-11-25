@@ -1,0 +1,120 @@
+#include "HX711.h"
+#include <Servo.h>
+
+Servo myservo;  // create servo object to control a servo
+// twelve servo objects can be created on most boards
+#define BLYNK_TEMPLATE_ID "TMPL3wkIDWRE6"
+ #define BLYNK_TEMPLATE_ID "TMPL3cqPEVGX5"
+#define BLYNK_TEMPLATE_NAME "dustbin"
+#define BLYNK_AUTH_TOKEN "pncKwBBXEi5eL3Ysk7GhbIxIt-fUeA6n"
+  #include <ESP8266WiFi.h>   // Library for Wi-Fi configuration
+  #include <BlynkSimpleEsp8266.h> // Library for simple coding interface on Blynk
+  char auth[] = BLYNK_AUTH_TOKEN;
+  char ssid[] = "project12345"; // Enter your WIFI name
+  char pass[] = "project12345"; // Enter your WIFI password
+  int data=0;    //variable to store data from virtaul pin
+
+  
+
+// HX711 circuit wiring
+const int LOADCELL_DOUT_PIN = D1;
+const int LOADCELL_SCK_PIN = D2;
+HX711 scale;
+
+int fire = D0; // Fire sensor pin
+int gas = A0;  // Gas sensor pin
+int trigPin = D6; // Ultrasonic sensor TRIG pin
+int echoPin = D7; // Ultrasonic sensor ECHO pin
+int vibration=D8;
+
+void setup() {
+  Serial.begin(9600);          // Start serial communication
+  pinMode(fire, INPUT);        // Set fire sensor pin as input        // Set gas sensor pin as input
+  pinMode(trigPin, OUTPUT);    // Set ultrasonic TRIG pin as output
+  pinMode(echoPin, INPUT);     // Set ultrasonic ECHO pin as input
+  scale.begin(LOADCELL_DOUT_PIN, LOADCELL_SCK_PIN);
+  Serial.println("System Initialized. Monitoring sensors...");
+   myservo.attach(D5);
+    pinMode(vibration, INPUT); 
+    pinMode(gas, INPUT);  
+    Blynk.begin(auth, ssid, pass, "blynk.cloud", 80); 
+}
+
+void loop() {
+  long reading = scale.read()- 160135;
+    Serial.print("HX711 reading: ");
+    Serial.println(reading);
+  // Fire sensor state
+  int fireState = digitalRead(fire);
+  
+  // Gas sensor state
+  int gasState = digitalRead(gas);
+  
+  // Distance measurement using ultrasonic sensor
+  long duration;
+  int distance;
+
+  // Trigger the ultrasonic sensor
+  digitalWrite(trigPin, LOW);
+  delayMicroseconds(2);
+  digitalWrite(trigPin, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(trigPin, LOW);
+
+  // Read the echo pin and calculate the distance
+  duration = pulseIn(echoPin, HIGH);
+  distance = duration * 0.034 / 2; // Convert to cm (speed of sound: 340 m/s)
+ distance= map(distance, 15,0,0,100);
+  // Fire Sensor Logic
+  if (fireState == HIGH) {
+    Serial.println("Fire detected!");
+    // Add alert logic here (e.g., activate buzzer or LED)
+  } else {
+    Serial.println("No fire detected.");
+  }
+
+  // Gas Sensor Logic
+  if (gasState == HIGH) {
+    Serial.println(gasState);
+    
+    // Add alert logic here (e.g., activate buzzer or LED)
+  } else {
+    Serial.println(gasState);
+  }
+
+  // Ultrasonic Sensor Logic
+  if (distance <= 10) { // Change threshold as needed
+    Serial.print("Object detected at a distance of: ");
+    Serial.print(distance);
+    Serial.println(" cm. Too close!");
+    // Add logic here (e.g., stop a motor or trigger an alert)
+  } else {
+    Serial.print("Distance measured: ");
+    Serial.print(distance);
+    Serial.println(" cm.");
+
+    
+  }
+
+  delay(1000); // Wait 1 second before the next iteration
+for(int i=0;i<500;i++)
+{
+  if(digitalRead(vibration)==HIGH)
+  {
+
+     myservo.write(0);                  // tell servo to go to position in variable 'pos'
+    delay(3000);                           // waits 15ms for the servo to reach the position
+    myservo.write(180); 
+    delay(1000);
+     Blynk.virtualWrite(V0, fireState); 
+     delay(2000);
+      Blynk.virtualWrite(V1, gasState ); 
+       delay(2000);
+    Blynk.virtualWrite(V2,  distance);
+     delay(2000);
+Blynk.virtualWrite(V3,reading);
+ 
+  }
+  delay(10);
+}
+}
